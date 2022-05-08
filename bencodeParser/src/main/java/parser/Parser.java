@@ -4,10 +4,7 @@ import error.ConsoleReporter;
 import lexer.Token;
 import lexer.TokenType;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 public class Parser {
     private final List<Token> tokens;
@@ -26,7 +23,7 @@ public class Parser {
 
     private List<Expr> parse() {
         List<Expr> expressions = new ArrayList<>();
-        while (!matches()) {
+        while (!matches(TokenType.EOF)) {
             try {
                 Expr expr = parseExpr();
                 expressions.add(expr);
@@ -35,6 +32,7 @@ public class Parser {
                 return null;
             }
         }
+        // CR: check that all tokens are handled
         return expressions;
     }
 
@@ -46,6 +44,7 @@ public class Parser {
         if (tokens.get(position).tokenType() == TokenType.LIST) {
             position++;
             List<Expr> list = new ArrayList<>();
+            // CR: l3:foo -> LIST, STRING, EOF -> List([Line])
             while (tokens.get(position).tokenType() != TokenType.TYPE_END) {
                 list.add(parseExpr());
             }
@@ -54,7 +53,7 @@ public class Parser {
         }
         if (tokens.get(position).tokenType() == TokenType.DICTIONARY) {
             position++;
-            HashMap<Expr, Expr> map = new HashMap<>();
+            Map<Expr, Expr> map = new HashMap<>();
             while (tokens.get(position).tokenType() != TokenType.TYPE_END) {
                 Expr key = parseExpr();
                 Expr value = parseExpr();
@@ -77,8 +76,8 @@ public class Parser {
             position++;
             return expr;
         }
-        String massage = unexpectedToken(tokens.get(position), TokenType.TYPE_END);
-        throw new ParserException(massage);
+        String message = unexpectedToken(tokens.get(position), TokenType.TYPE_END);
+        throw new ParserException(message);
     }
 
     private static String unexpectedToken(Token token, TokenType... expected) {
@@ -93,10 +92,10 @@ public class Parser {
                 """.formatted(position, Arrays.toString(expected), token.tokenType());
     }
 
+    // CR: add first parameter
     private boolean matches(TokenType... rest) {
         Token token = tokens.get(position);
         TokenType actual = token.tokenType();
-        if (actual == TokenType.EOF) return true;
         for (TokenType expected : rest) {
             if (actual == expected) return true;
         }

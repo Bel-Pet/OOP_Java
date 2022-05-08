@@ -23,6 +23,7 @@ public record Interpreter(BufferedReader br, ConsoleReporter reporter) {
         return fillText(expressions);
     }
 
+    // CR: move to separate class
     private String fillText(List<Expr> expressions) {
         StringBuilder text = new StringBuilder();
         for (Expr value : expressions) {
@@ -32,6 +33,7 @@ public record Interpreter(BufferedReader br, ConsoleReporter reporter) {
     }
 
     private StringBuilder getString(Expr expr) {
+        // CR: do not create new StringBuilder on next recursive call
         StringBuilder text = new StringBuilder();
         switch (expr) {
             case Expr.Line n -> {
@@ -48,6 +50,20 @@ public record Interpreter(BufferedReader br, ConsoleReporter reporter) {
                 text.deleteCharAt(text.lastIndexOf(",")).deleteCharAt(text.lastIndexOf(" "));
                 return text.append("]");
             }
+            /*
+
+            CR: format
+
+            {
+                "foo": "bar",
+                "baz": "baz",
+                "spam": [1, 2, 3],
+                "other":
+                {
+                    "baz": "baz"
+                }
+            }
+             */
             case Expr.Dictionary n -> {
                 text.append("{");
                 for (Map.Entry<Expr, Expr> entry : n.dictionary().entrySet()) {
@@ -56,6 +72,7 @@ public record Interpreter(BufferedReader br, ConsoleReporter reporter) {
                     text.append(getString(entry.getValue()));
                     text.append(", ");
                 }
+                // CR: remove deleteCharAt, replace with different loop logic
                 text.deleteCharAt(text.lastIndexOf(",")).deleteCharAt(text.lastIndexOf(" "));
                 return text.append("}");
             }

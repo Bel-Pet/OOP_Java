@@ -8,10 +8,10 @@ import java.util.List;
 
 public class Main {
     public static void main(String[] args) {
-        String Text = "d i123e 3:sdf i13e" +
+        String text = "d i123e 3:sdf i13e" +
                 "i45ee 4:5493s";
 
-        BufferedReader br = new BufferedReader(new StringReader(Text));
+        BufferedReader br = new BufferedReader(new StringReader(text));
         ConsoleReporter reporter = new ConsoleReporter();
 
         String result = Interpreter.interpret(br, reporter);

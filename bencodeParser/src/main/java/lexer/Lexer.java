@@ -79,22 +79,16 @@ public class Lexer {
 
     private boolean valueType(char c) {
         position++;
-        switch (c) {
-            case 'i' -> {
-                return addNumber();
-            }
-            case 'l' -> {
-                return addList();
-            }
-            case 'd' -> {
-                return addDictionary();
-            }
+        return switch (c) {
+            case 'i' -> addNumber();
+            case 'l' -> addList();
+            case 'd' -> addDictionary();
             default -> {
                 position--;
                 reporter.report(unknownChar());
-                return false;
+                yield false;
             }
-        }
+        };
     }
 
     private boolean addDictionary() {
@@ -108,6 +102,7 @@ public class Lexer {
     }
 
     private boolean addNumber() {
+        // CR: len > 0
         String number = getNumber('e');
         if (number != null) {
             tokens.add(new Token(TokenType.INTEGER, nLine, position, number));
@@ -118,22 +113,31 @@ public class Lexer {
     }
 
     private boolean addString() {
+        // CR: Integer
         String number = getNumber(':');
-        if (number != null) {
-            int size = Integer.parseInt(number);
-            int start = position;
-            do {
-                position++;
-                size--;
-            } while (size > 0 && position < line.length());
-            String value = line.substring(start, position);
-            if (size == 0) {
-                tokens.add(new Token(TokenType.STRING, nLine, position, value));
-                return true;
-            }
+        if (number == null) {
+            // CR: move report to getNumber
+            reporter.report(unknownChar());
+            return false;
         }
-        reporter.report(unknownChar());
-        return true;
+        int size = Integer.parseInt(number);
+        int start = position;
+        // CR: replace with if(position + size >= line.length()....
+        // CR: report error if not enough symbols
+        do {
+            position++;
+            size--;
+        } while (size > 0 && position < line.length());
+        // CR: handle only ascii chars
+        String value = line.substring(start, position);
+        if (size == 0) {
+            tokens.add(new Token(TokenType.STRING, nLine, position, value));
+            return true;
+        }
+        else {
+            reporter.report(unknownChar());
+            return false;
+        }
     }
 
     private String unknownChar() {
@@ -144,9 +148,9 @@ public class Lexer {
                 """.formatted(line.charAt(position), nLine, line, " ".repeat(position));
     }
 
-    private String getNumber(char end) {
+    private String getNumber(char endChar) {
         int start = position;
-        while (line.charAt(position) != end) {
+        while (line.charAt(position) != endChar) {
             if (!isDigit(line.charAt(position))) {
                 return null;
             }
