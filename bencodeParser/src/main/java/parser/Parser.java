@@ -1,6 +1,6 @@
 package parser;
 
-import error.ConsoleReporter;
+import error.Reporter;
 import lexer.Token;
 import lexer.TokenType;
 
@@ -8,97 +8,114 @@ import java.util.*;
 
 public class Parser {
     private final List<Token> tokens;
-    private final ConsoleReporter errorReporter;
+    private final Reporter reporter;
     private int position;
 
-    private Parser(List<Token> tokens, ConsoleReporter errorReporter) {
+    private Parser(List<Token> tokens, Reporter reporter) {
         this.tokens = tokens;
-        this.errorReporter = errorReporter;
+        this.reporter = reporter;
     }
 
-    public static List<Expr> parse(List<Token> tokens, ConsoleReporter errorReporter) {
-        Parser parser = new Parser(tokens, errorReporter);
+    public static List<Expr> parse(List<Token> tokens, Reporter reporter) {
+        Parser parser = new Parser(tokens, reporter);
         return parser.parse();
     }
 
     private List<Expr> parse() {
+        if (tokens == null) return null;
         List<Expr> expressions = new ArrayList<>();
-        while (!matches(TokenType.EOF)) {
+        while (position < tokens.size()) {
             try {
-                Expr expr = parseExpr();
-                expressions.add(expr);
+                expressions.add(parseExpr());
             } catch (ParserException e) {
-                errorReporter.report(e.getMessage());
+                reporter.report(e.getMessage());
                 return null;
             }
         }
-        // CR: check that all tokens are handled
         return expressions;
     }
 
-    private Expr parseExpr() {
-        return parseComplexType();
+    private Expr parseExpr() throws ParserException {
+        return switch (tokens.get(position).tokenType()) {
+            case LIST -> parseList();
+            case DICTIONARY -> parseDictionary();
+            default -> parseSimpleType();
+        };
     }
 
-    private Expr parseComplexType() {
-        if (tokens.get(position).tokenType() == TokenType.LIST) {
-            position++;
-            List<Expr> list = new ArrayList<>();
-            // CR: l3:foo -> LIST, STRING, EOF -> List([Line])
-            while (tokens.get(position).tokenType() != TokenType.TYPE_END) {
-                list.add(parseExpr());
+    private Expr parseList() throws ParserException {
+        int startType = position;
+        position++;
+        List<Expr> list = new ArrayList<>();
+        while (position < tokens.size()) {
+            if (tokens.get(position).tokenType() == TokenType.TYPE_END) {
+                position++;
+                return new Expr.Array(list);
             }
             position++;
-            return new Expr.Array(list);
+            list.add(parseExpr());
         }
-        if (tokens.get(position).tokenType() == TokenType.DICTIONARY) {
-            position++;
-            Map<Expr, Expr> map = new HashMap<>();
-            while (tokens.get(position).tokenType() != TokenType.TYPE_END) {
-                Expr key = parseExpr();
-                Expr value = parseExpr();
-                map.put(key, value);
-            }
-            position++;
-            return new Expr.Dictionary(map);
-        }
-        return parseSimpleType();
+        String message = unexpectedToken("No end complex char, complex type:", tokens.get(startType), TokenType.TYPE_END);
+        throw new ParserException(message);
     }
 
-    private Expr parseSimpleType() {
+    private Expr parseDictionary() throws ParserException {
+        int startType = position;
+        position++;
+        Map<String, Expr> map = new HashMap<>();
+        while (position < tokens.size()) {
+            if (tokens.get(position).tokenType() == TokenType.TYPE_END) {
+                position++;
+                return new Expr.Dictionary(map);
+            }
+            String key = addKey(map);
+            if (position >= tokens.size()) {
+                String message = "Expected value and end complex type in end of file";
+                throw new ParserException(message);
+            }
+            Expr value = parseExpr();
+            map.put(key, value);
+        }
+        String message = unexpectedToken("No end complex char, complex type:", tokens.get(startType), TokenType.TYPE_END);
+        throw new ParserException(message);
+    }
+
+    private Expr parseSimpleType() throws ParserException {
         if (tokens.get(position).tokenType() == TokenType.STRING) {
             Expr expr = new Expr.Line((String) tokens.get(position).value());
             position++;
             return expr;
         }
         if (tokens.get(position).tokenType() == TokenType.INTEGER) {
-            Expr expr = new Expr.Number((String) tokens.get(position).value());
+            Expr expr = new Expr.Number((Integer) tokens.get(position).value());
             position++;
             return expr;
         }
-        String message = unexpectedToken(tokens.get(position), TokenType.TYPE_END);
+        String message = unexpectedToken("Expected value", tokens.get(position), TokenType.INTEGER, TokenType.STRING, TokenType.LIST, TokenType.DICTIONARY);
         throw new ParserException(message);
     }
 
-    private static String unexpectedToken(Token token, TokenType... expected) {
-        int pos = token.pos();
-        String position = pos == -1 ?
-                "End of line " + token.nLine() :
-                "Line " + token.nLine() + ", position: " + pos;
+    private String addKey(Map<String, Expr> map) {
+        if (tokens.get(position).tokenType() != TokenType.STRING) {
+            String message = unexpectedToken("Invalid key", tokens.get(position), TokenType.STRING);
+            throw new ParserException(message);
+        }
+        String key = (String) tokens.get(position).value();
+        if (map.containsKey(key)) {
+            String message = unexpectedToken("Repeating key", tokens.get(position), TokenType.STRING);
+            throw new ParserException(message);
+        }
+        position++;
+        return key;
+    }
+
+    private String unexpectedToken(String message, Token token, TokenType... expected) {
+        String position = "Line " + token.nLine() + ", position: " + token.pos();
         return """
+                %s
                 %s
                 Expected tokens: %s,
                 Actual: %s
-                """.formatted(position, Arrays.toString(expected), token.tokenType());
-    }
-
-    // CR: add first parameter
-    private boolean matches(TokenType... rest) {
-        Token token = tokens.get(position);
-        TokenType actual = token.tokenType();
-        for (TokenType expected : rest) {
-            if (actual == expected) return true;
-        }
-        return false;
+                """.formatted(message, position, Arrays.toString(expected), token.tokenType());
     }
 }
