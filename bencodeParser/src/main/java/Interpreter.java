@@ -1,82 +1,77 @@
-import error.ConsoleReporter;
-import lexer.Lexer;
-import lexer.Token;
 import parser.Expr;
-import parser.Parser;
 
-import java.io.BufferedReader;
 import java.util.List;
 import java.util.Map;
 
-public record Interpreter(BufferedReader br, ConsoleReporter reporter) {
+public class Interpreter {
 
-    public static String interpret(BufferedReader br, ConsoleReporter reporter) {
-        Interpreter interpreter = new Interpreter(br, reporter);
+    StringBuilder text = new StringBuilder();
+    List<Expr> expressions;
+    int numberDictionaries;
+
+    private Interpreter(List<Expr> expressions) {
+        this.expressions = expressions;
+    }
+
+    public static String interpret(List<Expr> expressions) {
+        Interpreter interpreter = new Interpreter(expressions);
         return interpreter.interpret();
     }
 
     private String interpret() {
-        List<Token> tokens = Lexer.scan(br, reporter);
-        if (tokens == null) return null;
-        List<Expr> expressions = Parser.parse(tokens, reporter);
-        if (expressions == null) return null;
-        return fillText(expressions);
-    }
-
-    // CR: move to separate class
-    private String fillText(List<Expr> expressions) {
-        StringBuilder text = new StringBuilder();
-        for (Expr value : expressions) {
-            text.append(getString(value)).append('\n');
+        int pos = 0;
+        while (pos < expressions.size() - 1) {
+            checkExpression(expressions.get(pos));
+            text.append('\n');
+            pos++;
         }
+        checkExpression(expressions.get(pos));
+
         return text.toString();
     }
 
-    private StringBuilder getString(Expr expr) {
-        // CR: do not create new StringBuilder on next recursive call
-        StringBuilder text = new StringBuilder();
+    private void checkExpression(Expr expr) {
         switch (expr) {
-            case Expr.Line n -> {
-                return text.append('"').append(n.line()).append('"');
-            }
-            case Expr.Number n -> {
-                return text.append(n.number());
-            }
-            case Expr.Array n -> {
-                text.append("[");
-                for (Expr value : n.list()) {
-                    text.append(getString(value)).append(", ");
-                }
-                text.deleteCharAt(text.lastIndexOf(",")).deleteCharAt(text.lastIndexOf(" "));
-                return text.append("]");
-            }
-            /*
+            case Expr.Line n -> getLine(n);
+            case Expr.Number n -> getNumber(n);
+            case Expr.Array n -> getArray(n);
+            case Expr.Dictionary n -> getDictionary(n);
+        };
+    }
 
-            CR: format
+    private void getLine(Expr.Line line) {
+        text.append('"').append(line.value()).append('"');
+    }
 
-            {
-                "foo": "bar",
-                "baz": "baz",
-                "spam": [1, 2, 3],
-                "other":
-                {
-                    "baz": "baz"
-                }
-            }
-             */
-            case Expr.Dictionary n -> {
-                text.append("{");
-                for (Map.Entry<Expr, Expr> entry : n.dictionary().entrySet()) {
-                    text.append(getString(entry.getKey()));
-                    text.append(": ");
-                    text.append(getString(entry.getValue()));
-                    text.append(", ");
-                }
-                // CR: remove deleteCharAt, replace with different loop logic
-                text.deleteCharAt(text.lastIndexOf(",")).deleteCharAt(text.lastIndexOf(" "));
-                return text.append("}");
-            }
+    private void getNumber(Expr.Number line) {
+        text.append(line.value().toString());
+    }
+
+    private void getArray(Expr.Array line) {
+        int pos = 0;
+        text.append('[');
+        while (pos < line.value().size() - 1) {
+            checkExpression(line.value().get(pos));
+            text.append(", ");
+            pos++;
         }
-        return text;
+        checkExpression(line.value().get(pos));
+        text.append("]");
+    }
+
+    private void getDictionary(Expr.Dictionary dictionary) {
+        if (numberDictionaries != 0) text.append('\n');
+        text.append(" ".repeat(numberDictionaries)).append("{");
+        numberDictionaries++;
+        for (Map.Entry<String, Expr> entry : dictionary.value().entrySet()) {
+            text.append("\n");
+            text.append(" ".repeat(numberDictionaries)).append(entry.getKey());
+            text.append(": ");
+            checkExpression(entry.getValue());
+            text.append(",");
+        }
+        text.deleteCharAt(text.lastIndexOf(","));
+        numberDictionaries--;
+        text.append('\n').append(" ".repeat(numberDictionaries)).append("}");
     }
 }
