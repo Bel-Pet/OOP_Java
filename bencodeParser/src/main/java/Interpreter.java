@@ -61,16 +61,40 @@ public class Interpreter {
 
     private void getDictionary(Expr.Dictionary dictionary) {
         if (numberDictionaries != 0) text.append('\n');
+        
         text.append(" ".repeat(numberDictionaries)).append("{");
         numberDictionaries++;
-        for (Map.Entry<String, Expr> entry : dictionary.value().entrySet()) {
+        
+        if (dictionary.value().entrySet().size() == 0) {
+            numberDictionaries--;
+            text.append('\n').append(" ".repeat(numberDictionaries)).append("}");
+            return;
+        }
+        Iterator<Map.Entry<String, Expr>> iter = dictionary.value().entrySet().iterator();
+        Map.Entry<String, Expr> entry = iter.next();
+
+        text.append("\n");
+        text.append(" ".repeat(numberDictionaries)).append(entry.getKey());
+        text.append(": ");
+        checkExpression(entry.getValue());
+
+        while (iter.hasNext()) {
+            text.append(",");
+            entry = iter.next();
+            text.append("\n");
+            text.append(" ".repeat(numberDictionaries)).append(entry.getKey());
+            text.append(": ");
+            checkExpression(entry.getValue());
+        }
+        
+        /*for (Map.Entry<String, Expr> entry : dictionary.value().entrySet()) {
             text.append("\n");
             text.append(" ".repeat(numberDictionaries)).append(entry.getKey());
             text.append(": ");
             checkExpression(entry.getValue());
             text.append(",");
         }
-        text.deleteCharAt(text.lastIndexOf(","));
+        text.deleteCharAt(text.lastIndexOf(","));*/
         numberDictionaries--;
         text.append('\n').append(" ".repeat(numberDictionaries)).append("}");
     }
