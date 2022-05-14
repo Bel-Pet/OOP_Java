@@ -5,6 +5,5 @@ public enum TokenType {
     STRING,
     LIST,
     DICTIONARY,
-    TYPE_END,
-    EOF
+    TYPE_END
 }
