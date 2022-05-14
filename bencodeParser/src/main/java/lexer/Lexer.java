@@ -1,5 +1,5 @@
 package lexer;
-import error.ConsoleReporter;
+import error.Reporter;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -8,168 +8,152 @@ import java.util.List;
 
 public class Lexer {
     private final BufferedReader br;
-    private final ConsoleReporter reporter;
+    private final Reporter reporter;
     private final List<Token> tokens = new ArrayList<>();
 
     private String line;
     private int nLine;
     private int position;
 
-    private Lexer(BufferedReader br, ConsoleReporter reporter) {
+    private Lexer(BufferedReader br, Reporter reporter) {
         this.br = br;
         this.reporter = reporter;
     }
 
-    public static List<Token> scan(BufferedReader br, ConsoleReporter reporter) {
+    public static List<Token> scan(BufferedReader br, Reporter reporter) {
         Lexer lexer = new Lexer(br, reporter);
         return lexer.scan();
     }
 
     private List<Token> scan() {
-        while ((line = getLine()) != null) {
-            nLine++;
-            position = 0;
-            while (position < line.length()) {
-                char c = line.charAt(position);
-                if (Character.isWhitespace(c)) {
-                    position++;
-                    continue;
-                }
-                if (isDigit(c)) {
-                    if (!addString()) return null;
-                    continue;
-                }
-                if (!valueType(c)) {
-                    return null;
-                }
-            }
-        }
-        tokens.add(new Token(TokenType.EOF, nLine, position, null));
-        return tokens;
+        if ((line = getLine()) == null) return null;
+        return textProcessing() ? tokens : null;
     }
 
     private boolean textProcessing() {
         do {
             while (position < line.length()) {
-                char c = line.charAt(position);
-                if (c == 'e') {
-                    position++;
-                    tokens.add(new Token(TokenType.TYPE_END, nLine, position, null));
-                    return true;
-                }
-                if (Character.isWhitespace(c)) {
+                Character c = getChar();
+                if (c == null) {
+                    if (!reporter.report(errorPosition("This char not ascii"))) {
+                        return false;
+                    }
                     position++;
                     continue;
                 }
-                if (isDigit(c)) {
-                    if (!addString()) {
-                        return false;
-                    }
+                if (Character.isWhitespace(c)) {
+                    position++;
                     continue;
                 }
                 if (!valueType(c)) {
                     return false;
                 }
             }
-            nLine++;
-            position = 0;
         } while ((line = getLine()) != null);
-        return false;
+
+        return true;
     }
 
     private boolean valueType(char c) {
-        position++;
+        if (isDigit(c)) return addString();
         return switch (c) {
             case 'i' -> addNumber();
-            case 'l' -> addList();
-            case 'd' -> addDictionary();
+            case 'l' -> addComplexType(TokenType.LIST);
+            case 'd' -> addComplexType(TokenType.DICTIONARY);
+            case 'e' -> addComplexType(TokenType.TYPE_END);
             default -> {
-                position--;
-                reporter.report(unknownChar());
-                yield false;
+                if (!reporter.report(errorPosition("Unknown"))) {
+                    yield false;
+                }
+                position++;
+                yield true;
             }
         };
     }
 
-    private boolean addDictionary() {
-        tokens.add(new Token(TokenType.DICTIONARY, nLine, position, null));
-        return textProcessing();
-    }
-
-    private boolean addList() {
-        tokens.add(new Token(TokenType.LIST, nLine, position, null));
-        return textProcessing();
+    private boolean addComplexType(TokenType type) {
+        position++;
+        tokens.add(new Token(type, nLine, position, null));
+        return true;
     }
 
     private boolean addNumber() {
-        // CR: len > 0
-        String number = getNumber('e');
-        if (number != null) {
-            tokens.add(new Token(TokenType.INTEGER, nLine, position, number));
-            return true;
-        }
-        reporter.report(unknownChar());
-        return false;
+        position++;
+        Integer number = getNumber('e');
+        if (number == null) return false;
+
+        tokens.add(new Token(TokenType.INTEGER, nLine, position, number));
+        return true;
     }
 
     private boolean addString() {
-        // CR: Integer
-        String number = getNumber(':');
-        if (number == null) {
-            // CR: move report to getNumber
-            reporter.report(unknownChar());
+        Integer size = getNumber(':');
+        if (size == null) return false;
+
+        if (position + size > line.length()) {
+            reporter.report(errorPosition("Missing characters in string\nStart position of string:"));
             return false;
         }
-        int size = Integer.parseInt(number);
         int start = position;
-        // CR: replace with if(position + size >= line.length()....
-        // CR: report error if not enough symbols
-        do {
-            position++;
-            size--;
-        } while (size > 0 && position < line.length());
-        // CR: handle only ascii chars
-        String value = line.substring(start, position);
-        if (size == 0) {
-            tokens.add(new Token(TokenType.STRING, nLine, position, value));
-            return true;
-        }
-        else {
-            reporter.report(unknownChar());
-            return false;
-        }
-    }
-
-    private String unknownChar() {
-        return """
-                Unknown char '%c' at line %d:
-                %s
-                %s^--- here
-                """.formatted(line.charAt(position), nLine, line, " ".repeat(position));
-    }
-
-    private String getNumber(char endChar) {
-        int start = position;
-        while (line.charAt(position) != endChar) {
-            if (!isDigit(line.charAt(position))) {
-                return null;
+        StringBuilder buffer = new StringBuilder();
+        while (position < start + size) {
+            Character c = getChar();
+            if (c == null) {
+                if (!reporter.report(errorPosition("This char not ascii"))) {
+                    return false;
+                }
+                position++;
+                continue;
             }
+            buffer.append(c);
             position++;
         }
-        String result = line.substring(start, position);
+        tokens.add(new Token(TokenType.STRING, nLine, position, String.valueOf(buffer)));
+        return true;
+    }
+
+    private Integer getNumber(char endChar) {
+        StringBuilder buffer = new StringBuilder();
+        do {
+            if (!isDigit(line.charAt(position))) {
+                if (!reporter.report(errorPosition("Expected number"))) {
+                    return null;
+                }
+                position++;
+                continue;
+            }
+            buffer.append(line.charAt(position));
+            position++;
+        } while (position < line.length() && line.charAt(position) != endChar);
+        if (buffer.length() == 0) return null;
         position++;
-        return result;
+        return Integer.parseInt(String.valueOf(buffer));
     }
 
     private String getLine() {
         try {
+            nLine++;
+            position = 0;
             return br.readLine();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    private static boolean isDigit(char c) {
+    private Character getChar() {
+        char c = line.charAt(position);
+        return c > 127 ? null : c;
+    }
+
+    private boolean isDigit(char c) {
         return c >= '0' && c <= '9';
+    }
+
+    private String errorPosition(String message) {
+        return """
+                %s char '%c' at line %d:
+                %s
+                %s^--- here
+                """.formatted(message, line.charAt(position), nLine, line, " ".repeat(position));
     }
 }
