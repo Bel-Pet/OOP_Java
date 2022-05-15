@@ -17,19 +17,20 @@ public class Parser {
     }
 
     public static List<Expr> parse(List<Token> tokens, Reporter reporter) {
+        if (tokens == null) return null;
         Parser parser = new Parser(tokens, reporter);
         return parser.parse();
     }
 
     private List<Expr> parse() {
-        if (tokens == null) return null;
         List<Expr> expressions = new ArrayList<>();
         while (position < tokens.size()) {
             try {
                 expressions.add(parseExpr());
             } catch (ParserException e) {
-                reporter.report(e.getMessage());
-                return null;
+                if (!reporter.report(e.getMessage())) {
+                    return null;
+                }
             }
         }
         return expressions;
@@ -62,6 +63,7 @@ public class Parser {
     private Expr parseDictionary() throws ParserException {
         int startType = position;
         position++;
+        // use different Map
         Map<String, Expr> map = new HashMap<>();
         while (position < tokens.size()) {
             if (tokens.get(position).tokenType() == TokenType.TYPE_END) {
@@ -76,6 +78,7 @@ public class Parser {
             Expr value = parseExpr();
             map.put(key, value);
         }
+        // check keys order
         String message = unexpectedToken("No end complex char, complex type:", tokens.get(startType), TokenType.TYPE_END);
         throw new ParserException(message);
     }

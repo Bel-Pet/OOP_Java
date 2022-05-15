@@ -12,18 +12,14 @@ public class Main {
     public static String interpret(BufferedReader br, Reporter reporter) {
         List<Token> tokens = Lexer.scan(br, reporter);
         if (tokens == null) {
-            for (String v: reporter.getReporters()) {
-                System.out.println(v);
-            }
+            reporter.getReporters().forEach(System.out::println);
             return null;
         }
         List<Expr> expressions = Parser.parse(tokens, reporter);
         if (expressions != null) {
             return Interpreter.interpret(expressions);
         }
-        for (String v: reporter.getReporters()) {
-            System.out.println(v);
-        }
+        reporter.getReporters().forEach(System.out::println);
         return null;
     }
 

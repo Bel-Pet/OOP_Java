@@ -1,14 +1,13 @@
 import parser.Expr;
 
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class Interpreter {
 
     StringBuilder text = new StringBuilder();
     List<Expr> expressions;
-    int numberDictionaries;
+    int depth;
 
     private Interpreter(List<Expr> expressions) {
         this.expressions = expressions;
@@ -61,21 +60,27 @@ public class Interpreter {
     }
 
     private void getDictionary(Expr.Dictionary dictionary) {
-        if (numberDictionaries != 0) text.append('\n');
-        
-        text.append(" ".repeat(numberDictionaries)).append("{");
-        numberDictionaries++;
-        
+        if (depth != 0) text.append('\n');
+
+        String offset = " ".repeat(depth);
+        text.append(offset).append("{");
+        depth++;
+
+
         if (dictionary.value().entrySet().size() == 0) {
-            numberDictionaries--;
-            text.append('\n').append(" ".repeat(numberDictionaries)).append("}");
+            depth--;
+            text.append('\n').append(offset).append("}");
             return;
         }
         Iterator<Map.Entry<String, Expr>> iter = dictionary.value().entrySet().iterator();
         Map.Entry<String, Expr> entry = iter.next();
 
+
+//        StringJoiner stringJoiner = new StringJoiner();
+//        Collectors.joining()
+
         text.append("\n");
-        text.append(" ".repeat(numberDictionaries)).append(entry.getKey());
+        text.append(offset).append(entry.getKey());
         text.append(": ");
         checkExpression(entry.getValue());
 
@@ -83,7 +88,7 @@ public class Interpreter {
             text.append(",");
             entry = iter.next();
             text.append("\n");
-            text.append(" ".repeat(numberDictionaries)).append(entry.getKey());
+            text.append(offset).append(entry.getKey());
             text.append(": ");
             checkExpression(entry.getValue());
         }
@@ -96,7 +101,7 @@ public class Interpreter {
             text.append(",");
         }
         text.deleteCharAt(text.lastIndexOf(","));*/
-        numberDictionaries--;
-        text.append('\n').append(" ".repeat(numberDictionaries)).append("}");
+        depth--;
+        text.append('\n').append(offset).append("}");
     }
 }

@@ -26,16 +26,16 @@ public class Lexer {
     }
 
     private List<Token> scan() {
-        if ((line = getLine()) == null) return null;
-        return textProcessing() ? tokens : null;
+        boolean hasErrors = textProcessing();
+        return hasErrors ? tokens : null;
     }
 
     private boolean textProcessing() {
-        do {
+        while ((line = getLine()) != null) {
             while (position < line.length()) {
                 Character c = getChar();
                 if (c == null) {
-                    if (!reporter.report(errorPosition("This char not ascii"))) {
+                    if (!reporter.report(errorPosition("This char not ascii,"))) {
                         return false;
                     }
                     position++;
@@ -49,7 +49,7 @@ public class Lexer {
                     return false;
                 }
             }
-        } while ((line = getLine()) != null);
+        }
 
         return true;
     }
@@ -95,6 +95,9 @@ public class Lexer {
             return false;
         }
         int start = position;
+//        String str = line.substring(position, position + size);
+//        boolean hasNonAscii = str.chars().anyMatch(c -> c > 127);
+
         StringBuilder buffer = new StringBuilder();
         while (position < start + size) {
             Character c = getChar();
@@ -113,7 +116,7 @@ public class Lexer {
     }
 
     private Integer getNumber(char endChar) {
-        StringBuilder buffer = new StringBuilder();
+        StringBuilder builder = new StringBuilder();
         do {
             if (!isDigit(line.charAt(position))) {
                 if (!reporter.report(errorPosition("Expected number"))) {
@@ -122,12 +125,14 @@ public class Lexer {
                 position++;
                 continue;
             }
-            buffer.append(line.charAt(position));
+            builder.append(line.charAt(position));
             position++;
         } while (position < line.length() && line.charAt(position) != endChar);
-        if (buffer.length() == 0) return null;
+        if (builder.length() == 0) return null;
         position++;
-        return Integer.parseInt(String.valueOf(buffer));
+        // CR: check i32
+        // CR: add position and line info
+        return Integer.parseInt(String.valueOf(builder));
     }
 
     private String getLine() {

@@ -15,6 +15,7 @@ public class Reporter implements ErrorReporter {
 
     @Override
     public boolean report(String message) {
+        // CR: System.err
         buffer.add(message);
         nMessages++;
         return nMessages < maxMessages;

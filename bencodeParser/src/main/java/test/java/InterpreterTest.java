@@ -10,9 +10,22 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/*
+1. string
+2. integer
+3. dict empty
+4. dict one element - primitive
+5. list empty
+6. list one element - primitive
+7. dict in dict
+8. list in dict
+9. list in list
+10. dict in list
+ */
+
 class InterpreterTest {
 
-    private String getJasonText(String text, int maxMessages) {
+    private String getJsonText(String text, int maxMessages) {
         BufferedReader br = new BufferedReader(new StringReader(text));
         Reporter reporter = new Reporter(maxMessages);
         List<Expr> expressions = Parser.parse(Lexer.scan(br, reporter), reporter);
@@ -21,12 +34,12 @@ class InterpreterTest {
 
     @Test
     public void expressionsIsNull() {
-        assertNull(getJasonText("", 5));
+        assertNull(getJsonText("", 5));
     }
 
     @Test
     public void noAsciiCharInString() {
-        String res = getJasonText("4:e\u0660\u06F0i", 4);
+        String res = getJsonText("4:e\u0660\u06F0i", 4);
         assertNotNull(res);
         assertEquals("\"ei\"", res);
     }
@@ -56,7 +69,7 @@ class InterpreterTest {
                  ert: 34
                 }
                 55""";
-        String res = getJasonText(input, 7);
+        String res = getJsonText(input, 7);
         assertNotNull(res);
         assertEquals(output, res);
     }
@@ -85,7 +98,7 @@ class InterpreterTest {
                  ert: 34
                 }
                 55""";
-        String res = getJasonText(input, 7);
+        String res = getJsonText(input, 7);
         assertNotNull(res);
         assertEquals(output, res);
     }
