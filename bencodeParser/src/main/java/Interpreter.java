@@ -4,10 +4,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class Interpreter {
-
-    StringBuilder text = new StringBuilder();
     List<Expr> expressions;
-    int depth;
+    int numberDictionaries;
 
     private Interpreter(List<Expr> expressions) {
         this.expressions = expressions;
@@ -19,19 +17,11 @@ public class Interpreter {
     }
 
     private String interpret() {
-        int pos = 0;
-        while (pos < expressions.size() - 1) {
-            checkExpression(expressions.get(pos));
-            text.append('\n');
-            pos++;
-        }
-        checkExpression(expressions.get(pos));
-
-        return text.toString();
+        return expressions.stream().map(this::checkExpression).collect(Collectors.joining("\n"));
     }
 
-    private void checkExpression(Expr expr) {
-        switch (expr) {
+    private String checkExpression(Expr expr) {
+        return switch (expr) {
             case Expr.Line n -> getLine(n);
             case Expr.Number n -> getNumber(n);
             case Expr.Array n -> getArray(n);
@@ -39,69 +29,42 @@ public class Interpreter {
         };
     }
 
-    private void getLine(Expr.Line line) {
-        text.append('"').append(line.value()).append('"');
+    private String getLine(Expr.Line line) {
+        return '"' + line.value() + '"';
     }
 
-    private void getNumber(Expr.Number line) {
-        text.append(line.value().toString());
+    private String getNumber(Expr.Number line) {
+        return line.value().toString();
     }
 
-    private void getArray(Expr.Array line) {
-        int pos = 0;
-        text.append('[');
-        while (pos < line.value().size() - 1) {
-            checkExpression(line.value().get(pos));
-            text.append(", ");
-            pos++;
-        }
-        checkExpression(line.value().get(pos));
-        text.append("]");
+    private String getArray(Expr.Array line) {
+        return  "["
+                + line.value().stream().map(this::checkExpression).collect(Collectors.joining(", "))
+                + "]";
     }
 
-    private void getDictionary(Expr.Dictionary dictionary) {
-        if (depth != 0) text.append('\n');
+    private String getDictionary(Expr.Dictionary dictionary) {
+        StringJoiner str = new StringJoiner("\n");
 
-        String offset = " ".repeat(depth);
-        text.append(offset).append("{");
-        depth++;
+        if (numberDictionaries > 0) str.add("");
+        str.add(" ".repeat(numberDictionaries) + "{");
+        numberDictionaries++;
 
+        List<String> list = new LinkedList<>(dictionary.value().keySet());
+        Collections.sort(list);
+        str.add(list.stream().map(key -> addMapEntry(dictionary.value(), key)).collect(Collectors.joining(",\n")));
+        /*str.append(dictionary.value().keySet()
+                                        .stream().map(key -> addMapEntry(dictionary.value(), key))
+                                        .collect(Collectors.joining(",\n")));*/
+        numberDictionaries--;
+        str.add(" ".repeat(numberDictionaries) + "}");
 
-        if (dictionary.value().entrySet().size() == 0) {
-            depth--;
-            text.append('\n').append(offset).append("}");
-            return;
-        }
-        Iterator<Map.Entry<String, Expr>> iter = dictionary.value().entrySet().iterator();
-        Map.Entry<String, Expr> entry = iter.next();
+        return str.toString();
+    }
 
-
-//        StringJoiner stringJoiner = new StringJoiner();
-//        Collectors.joining()
-
-        text.append("\n");
-        text.append(offset).append(entry.getKey());
-        text.append(": ");
-        checkExpression(entry.getValue());
-
-        while (iter.hasNext()) {
-            text.append(",");
-            entry = iter.next();
-            text.append("\n");
-            text.append(offset).append(entry.getKey());
-            text.append(": ");
-            checkExpression(entry.getValue());
-        }
-        
-        /*for (Map.Entry<String, Expr> entry : dictionary.value().entrySet()) {
-            text.append("\n");
-            text.append(" ".repeat(numberDictionaries)).append(entry.getKey());
-            text.append(": ");
-            checkExpression(entry.getValue());
-            text.append(",");
-        }
-        text.deleteCharAt(text.lastIndexOf(","));*/
-        depth--;
-        text.append('\n').append(offset).append("}");
+    private String addMapEntry(LinkedHashMap<String, Expr> map, String key) {
+        return " ".repeat(numberDictionaries)
+                + "\"" + key + "\""
+                + ": " + checkExpression(map.get(key));
     }
 }
