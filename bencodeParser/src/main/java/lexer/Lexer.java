@@ -14,6 +14,8 @@ public class Lexer {
     private String line;
     private int nLine;
     private int position;
+    private boolean hasError = false;
+    private static final int ASCII_BARRIER = 127;
 
     private Lexer(BufferedReader br, Reporter reporter) {
         this.br = br;
@@ -26,113 +28,98 @@ public class Lexer {
     }
 
     private List<Token> scan() {
-        boolean hasErrors = textProcessing();
-        return hasErrors ? tokens : null;
-    }
-
-    private boolean textProcessing() {
         while ((line = getLine()) != null) {
             while (position < line.length()) {
-                Character c = getChar();
-                if (c == null) {
-                    if (!reporter.report(errorPosition("This char not ascii,"))) {
-                        return false;
-                    }
+                if (Character.isWhitespace(line.charAt(position))) {
                     position++;
                     continue;
                 }
-                if (Character.isWhitespace(c)) {
-                    position++;
-                    continue;
-                }
-                if (!valueType(c)) {
-                    return false;
+
+                try {
+                    valueType();
+                } catch (LexerException e) {
+                    reporter.report(e.getMessage());
+                    return null;
                 }
             }
         }
 
-        return true;
+        return hasError || tokens.size() == 0 ? null : tokens;
     }
 
-    private boolean valueType(char c) {
-        if (isDigit(c)) return addString();
-        return switch (c) {
+    private void valueType() throws LexerException {
+        if (isDigit()) {
+            addString();
+            return;
+        }
+
+        switch (line.charAt(position)) {
             case 'i' -> addNumber();
             case 'l' -> addComplexType(TokenType.LIST);
             case 'd' -> addComplexType(TokenType.DICTIONARY);
             case 'e' -> addComplexType(TokenType.TYPE_END);
             default -> {
-                if (!reporter.report(errorPosition("Unknown"))) {
-                    yield false;
-                }
+                hasError = true;
+                if (!reporter.report(errorPosition("Unknown")))
+                    throw new LexerException("Limit error messages");
                 position++;
-                yield true;
             }
-        };
+        }
     }
 
-    private boolean addComplexType(TokenType type) {
+    private void addComplexType(TokenType type) {
         position++;
         tokens.add(new Token(type, nLine, position, null));
-        return true;
     }
 
-    private boolean addNumber() {
+    private void addNumber() throws LexerException {
         position++;
         Integer number = getNumber('e');
-        if (number == null) return false;
-
         tokens.add(new Token(TokenType.INTEGER, nLine, position, number));
-        return true;
     }
 
-    private boolean addString() {
-        Integer size = getNumber(':');
-        if (size == null) return false;
+    private void addString() throws LexerException {
+        int size = getNumber(':');
+        if (position + size > line.length())
+            throw new LexerException(errorPosition("Missing characters in string\nStart position of string:"));
 
-        if (position + size > line.length()) {
-            reporter.report(errorPosition("Missing characters in string\nStart position of string:"));
-            return false;
-        }
-        int start = position;
-//        String str = line.substring(position, position + size);
-//        boolean hasNonAscii = str.chars().anyMatch(c -> c > 127);
+        String str = line.substring(position, position + size);
+        if (str.chars().noneMatch(c -> c <= ASCII_BARRIER))
+            throw new LexerException(errorPosition("This string contains not ascii char"));
 
+        tokens.add(new Token(TokenType.STRING, nLine, position, str));
+        position += size;
+    }
+
+    private Integer getNumber(char endChar) throws LexerException {
         StringBuilder buffer = new StringBuilder();
-        while (position < start + size) {
-            Character c = getChar();
-            if (c == null) {
-                if (!reporter.report(errorPosition("This char not ascii"))) {
-                    return false;
-                }
+
+        while (position < line.length() && line.charAt(position) != endChar) {
+            if (!isDigit()) {
+                hasError = true;
+                if (!reporter.report(errorPosition("Expected number")))
+                    throw new LexerException("Limit error messages");
                 position++;
                 continue;
             }
-            buffer.append(c);
+            buffer.append(line.charAt(position));
             position++;
         }
-        tokens.add(new Token(TokenType.STRING, nLine, position, String.valueOf(buffer)));
-        return true;
-    }
 
-    private Integer getNumber(char endChar) {
-        StringBuilder builder = new StringBuilder();
-        do {
-            if (!isDigit(line.charAt(position))) {
-                if (!reporter.report(errorPosition("Expected number"))) {
-                    return null;
-                }
-                position++;
-                continue;
-            }
-            builder.append(line.charAt(position));
+        if (position >= line.length() || line.charAt(position) != endChar) {
+            position--;
+            throw new LexerException(errorPosition("Expected '" + endChar + "' after"));
+        }
+
+        if (buffer.length() == 0)
+            throw new LexerException(errorPosition("No number"));
+
+        try {
             position++;
-        } while (position < line.length() && line.charAt(position) != endChar);
-        if (builder.length() == 0) return null;
-        position++;
-        // CR: check i32
-        // CR: add position and line info
-        return Integer.parseInt(String.valueOf(builder));
+            return Integer.parseInt(String.valueOf(buffer));
+        } catch (NumberFormatException e) {
+            throw new LexerException(errorPosition("Too long number"));
+        }
     }
 
     private String getLine() {
@@ -145,13 +132,8 @@ public class Lexer {
         }
     }
 
-    private Character getChar() {
-        char c = line.charAt(position);
-        return c > 127 ? null : c;
-    }
-
-    private boolean isDigit(char c) {
-        return c >= '0' && c <= '9';
+    private boolean isDigit() {
+        return line.charAt(position) >= '0' && line.charAt(position) <= '9';
     }
 
     private String errorPosition(String message) {
