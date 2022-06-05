@@ -9,6 +9,7 @@ import java.util.*;
 public class Parser {
     private final List<Token> tokens;
     private final Reporter reporter;
+
     private int position;
 
     private Parser(List<Token> tokens, Reporter reporter) {
@@ -17,20 +18,21 @@ public class Parser {
     }
 
     public static List<Expr> parse(List<Token> tokens, Reporter reporter) {
-        if (tokens == null) return null;
         Parser parser = new Parser(tokens, reporter);
         return parser.parse();
     }
 
     private List<Expr> parse() {
+        if (tokens == null) return null;
+
         List<Expr> expressions = new ArrayList<>();
+
         while (position < tokens.size()) {
             try {
                 expressions.add(parseExpr());
             } catch (ParserException e) {
-                if (!reporter.report(e.getMessage())) {
-                    return null;
-                }
+                reporter.report(e.getMessage());
+                return null;
             }
         }
         return expressions;
@@ -44,70 +46,87 @@ public class Parser {
         };
     }
 
-    private Expr parseList() throws ParserException {
-        int startType = position;
-        position++;
-        List<Expr> list = new ArrayList<>();
-        while (position < tokens.size()) {
-            if (tokens.get(position).tokenType() == TokenType.TYPE_END) {
-                position++;
-                return new Expr.Array(list);
-            }
-            position++;
-            list.add(parseExpr());
-        }
-        String message = unexpectedToken("No end complex char, complex type:", tokens.get(startType), TokenType.TYPE_END);
-        throw new ParserException(message);
-    }
-
-    private Expr parseDictionary() throws ParserException {
-        int startType = position;
-        position++;
-        // use different Map
-        Map<String, Expr> map = new HashMap<>();
-        while (position < tokens.size()) {
-            if (tokens.get(position).tokenType() == TokenType.TYPE_END) {
-                position++;
-                return new Expr.Dictionary(map);
-            }
-            String key = addKey(map);
-            if (position >= tokens.size()) {
-                String message = "Expected value and end complex type in end of file";
-                throw new ParserException(message);
-            }
-            Expr value = parseExpr();
-            map.put(key, value);
-        }
-        // check keys order
-        String message = unexpectedToken("No end complex char, complex type:", tokens.get(startType), TokenType.TYPE_END);
-        throw new ParserException(message);
-    }
-
     private Expr parseSimpleType() throws ParserException {
         if (tokens.get(position).tokenType() == TokenType.STRING) {
             Expr expr = new Expr.Line((String) tokens.get(position).value());
             position++;
             return expr;
         }
+
         if (tokens.get(position).tokenType() == TokenType.INTEGER) {
             Expr expr = new Expr.Number((Integer) tokens.get(position).value());
             position++;
             return expr;
         }
-        String message = unexpectedToken("Expected value", tokens.get(position), TokenType.INTEGER, TokenType.STRING, TokenType.LIST, TokenType.DICTIONARY);
+
+        String message = unexpectedToken("Expected value",
+                                            tokens.get(position),
+                                            TokenType.INTEGER, TokenType.STRING, TokenType.LIST, TokenType.DICTIONARY);
+
         throw new ParserException(message);
     }
 
-    private String addKey(Map<String, Expr> map) {
+    private Expr parseList() throws ParserException {
+        int startType = position;
+        position++;
+
+        List<Expr> list = new ArrayList<>();
+
+        while (position < tokens.size()) {
+            if (tokens.get(position).tokenType() == TokenType.TYPE_END) {
+                position++;
+                return new Expr.Array(list);
+            }
+
+            list.add(parseExpr());
+        }
+
+        throw new ParserException(unexpectedToken("No end complex char, complex type:",
+                                                            tokens.get(startType),
+                                                            TokenType.TYPE_END));
+    }
+
+    private Expr parseDictionary() throws ParserException {
+        int startType = position;
+        position++;
+
+        LinkedHashMap<String, Expr> map = new LinkedHashMap<>();
+
+        while (position < tokens.size()) {
+            if (tokens.get(position).tokenType() == TokenType.TYPE_END) {
+                position++;
+                return new Expr.Dictionary(map);
+            }
+
+            String key = addKey(map);
+
+            if (position >= tokens.size()) {
+                String message = "Expected value and end complex type in end of file";
+                throw new ParserException(message);
+            }
+
+            Expr value = parseExpr();
+            map.put(key, value);
+        }
+
+        throw new ParserException(unexpectedToken("No end complex char, complex type:",
+                                                            tokens.get(startType),
+                                                            TokenType.TYPE_END));
+    }
+
+    private String addKey(LinkedHashMap<String, Expr> map) {
         if (tokens.get(position).tokenType() != TokenType.STRING) {
             String message = unexpectedToken("Invalid key", tokens.get(position), TokenType.STRING);
             throw new ParserException(message);
         }
+
         String key = (String) tokens.get(position).value();
+
         if (map.containsKey(key)) {
             String message = unexpectedToken("Repeating key", tokens.get(position), TokenType.STRING);
             throw new ParserException(message);
         }
+
         position++;
         return key;
     }
