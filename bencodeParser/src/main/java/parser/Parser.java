@@ -1,6 +1,7 @@
 package parser;
 
 import error.Reporter;
+import error.TranslateBencodeException;
 import lexer.Token;
 import lexer.TokenType;
 
@@ -30,7 +31,7 @@ public class Parser {
         while (position < tokens.size()) {
             try {
                 expressions.add(parseExpr());
-            } catch (ParserException e) {
+            } catch (TranslateBencodeException e) {
                 reporter.report(e.getMessage());
                 return null;
             }
@@ -38,7 +39,7 @@ public class Parser {
         return expressions;
     }
 
-    private Expr parseExpr() throws ParserException {
+    private Expr parseExpr() throws TranslateBencodeException {
         return switch (tokens.get(position).tokenType()) {
             case LIST -> parseList();
             case DICTIONARY -> parseDictionary();
@@ -46,7 +47,7 @@ public class Parser {
         };
     }
 
-    private Expr parseSimpleType() throws ParserException {
+    private Expr parseSimpleType() throws TranslateBencodeException {
         if (tokens.get(position).tokenType() == TokenType.STRING) {
             Expr expr = new Expr.Line((String) tokens.get(position).value());
             position++;
@@ -63,10 +64,10 @@ public class Parser {
                                             tokens.get(position),
                                             TokenType.INTEGER, TokenType.STRING, TokenType.LIST, TokenType.DICTIONARY);
 
-        throw new ParserException(message);
+        throw new TranslateBencodeException(message);
     }
 
-    private Expr parseList() throws ParserException {
+    private Expr parseList() throws TranslateBencodeException {
         int startType = position;
         position++;
 
@@ -81,12 +82,12 @@ public class Parser {
             list.add(parseExpr());
         }
 
-        throw new ParserException(unexpectedToken("No end complex char, complex type:",
+        throw new TranslateBencodeException(unexpectedToken("No end complex char, complex type:",
                                                             tokens.get(startType),
                                                             TokenType.TYPE_END));
     }
 
-    private Expr parseDictionary() throws ParserException {
+    private Expr parseDictionary() throws TranslateBencodeException {
         int startType = position;
         position++;
 
@@ -102,29 +103,29 @@ public class Parser {
 
             if (position >= tokens.size()) {
                 String message = "Expected value and end complex type in end of file";
-                throw new ParserException(message);
+                throw new TranslateBencodeException(message);
             }
 
             Expr value = parseExpr();
             map.put(key, value);
         }
 
-        throw new ParserException(unexpectedToken("No end complex char, complex type:",
+        throw new TranslateBencodeException(unexpectedToken("No end complex char, complex type:",
                                                             tokens.get(startType),
                                                             TokenType.TYPE_END));
     }
 
-    private String addKey(LinkedHashMap<String, Expr> map) {
+    private String addKey(LinkedHashMap<String, Expr> map) throws TranslateBencodeException {
         if (tokens.get(position).tokenType() != TokenType.STRING) {
             String message = unexpectedToken("Invalid key", tokens.get(position), TokenType.STRING);
-            throw new ParserException(message);
+            throw new TranslateBencodeException(message);
         }
 
         String key = (String) tokens.get(position).value();
 
         if (map.containsKey(key)) {
             String message = unexpectedToken("Repeating key", tokens.get(position), TokenType.STRING);
-            throw new ParserException(message);
+            throw new TranslateBencodeException(message);
         }
 
         position++;
