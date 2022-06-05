@@ -40,7 +40,7 @@ class InterpreterTest {
     public void emptyDictionary() {
         String output = """
                 {
-                
+                                
                 }""";
         assertEquals(output, getJasonText("de"));
     }
@@ -49,7 +49,7 @@ class InterpreterTest {
     public void oneElementDictionary() {
         String output = """
                 {
-                 adas: 6
+                 "adas": 6
                 }""";
         assertEquals(output, getJasonText("d 4:adas i6e e"));
     }
@@ -58,9 +58,9 @@ class InterpreterTest {
     public void dictionaryInDictionary() {
         String output = """
                 {
-                 qwe:\s
+                 "qwe":\s
                  {
-                  adas: 6
+                  "adas": 6
                  }
                 }""";
         assertEquals(output, getJasonText("d 3:qwe d 4:adas i6e e e"));
@@ -70,7 +70,7 @@ class InterpreterTest {
     public void listInDictionary() {
         String output = """
                 {
-                 qwe: [456]
+                 "qwe": [456]
                 }""";
         assertEquals(output, getJasonText("d 3:qwe l i456e e e"));
     }
@@ -94,7 +94,7 @@ class InterpreterTest {
     public void dictionaryInList() {
         String output = """
                 [{
-                 rty: 456
+                 "rty": 456
                 }]""";
         assertEquals(output, getJasonText("l d 3:rty i456e e e"));
     }
@@ -121,18 +121,18 @@ class InterpreterTest {
 
         String output = """
                 {
-                 adas: 6,
-                 bsd: 5,
-                 fgh: [[435, "qwert",\s
+                 "adas": 6,
+                 "bsd": 5,
+                 "fgh": [[435, "qwert",\s
                  {
-                  gt: 12,
-                  vfrd: "rt"
+                  "gt": 12,
+                  "vfrd": "rt"
                  }, 78]],
-                 kjftgy:\s
+                 "kjftgy":\s
                  {
-                  kds: 345
+                  "kds": 345
                  },
-                 vfd: ["dfgg", "bgf", 45]
+                 "vfd": ["dfgg", "bgf", 45]
                 }""";
 
         assertEquals(output, getJasonText(input));
