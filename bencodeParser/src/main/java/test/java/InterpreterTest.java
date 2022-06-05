@@ -1,4 +1,5 @@
 import error.Reporter;
+import interpreter.Interpreter;
 import lexer.Lexer;
 import org.junit.jupiter.api.Test;
 import parser.Expr;
