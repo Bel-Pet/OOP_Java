@@ -1,12 +1,8 @@
 package error;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class Reporter implements ErrorReporter {
 
     private final int maxMessages;
-    private final List<String> buffer = new ArrayList<>();
     private int nMessages;
 
     public Reporter(int maxMessages) {
@@ -15,13 +11,12 @@ public class Reporter implements ErrorReporter {
 
     @Override
     public boolean report(String message) {
-        // CR: System.err
-        buffer.add(message);
         nMessages++;
+        System.err.println(message);
         return nMessages < maxMessages;
     }
 
-    public List<String> getReporters() {
-        return buffer;
+    public int getNumberErrors() {
+        return nMessages;
     }
 }
