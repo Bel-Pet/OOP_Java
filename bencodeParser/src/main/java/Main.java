@@ -1,4 +1,5 @@
 import error.*;
+import interpreter.Interpreter;
 import lexer.Lexer;
 import lexer.Token;
 import parser.Expr;
@@ -12,16 +13,11 @@ public class Main {
     public static String interpret(BufferedReader br, int limitErrorMessages) {
         Reporter reporter = new Reporter(limitErrorMessages);
         List<Token> tokens = Lexer.scan(br, reporter);
-
-        if (tokens == null) {
-            System.out.println("Errors found: " + reporter.getNumberErrors()
-                                + "\nLimit error messages: " + limitErrorMessages);
-            return null;
-        }
-
         List<Expr> expressions = Parser.parse(tokens, reporter);
+
         if (expressions != null) return Interpreter.interpret(expressions);
 
+        System.out.println("Errors found: " + reporter.getNumberErrors() + "\nLimit error messages: " + limitErrorMessages);
         return null;
     }
 
