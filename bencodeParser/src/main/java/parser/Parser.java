@@ -87,7 +87,7 @@ public class Parser {
                                                             TokenType.TYPE_END));
     }
 
-    private Expr parseDictionary() throws TranslateBencodeException {
+    private Expr parseDictionary() {
         int startType = position;
         position++;
 
@@ -95,6 +95,7 @@ public class Parser {
 
         while (position < tokens.size()) {
             if (tokens.get(position).tokenType() == TokenType.TYPE_END) {
+                // CR: check order + test
                 position++;
                 return new Expr.Dictionary(map);
             }
@@ -115,7 +116,7 @@ public class Parser {
                                                             TokenType.TYPE_END));
     }
 
-    private String addKey(LinkedHashMap<String, Expr> map) throws TranslateBencodeException {
+    private String addKey(LinkedHashMap<String, Expr> map) {
         if (tokens.get(position).tokenType() != TokenType.STRING) {
             String message = unexpectedToken("Invalid key", tokens.get(position), TokenType.STRING);
             throw new TranslateBencodeException(message);

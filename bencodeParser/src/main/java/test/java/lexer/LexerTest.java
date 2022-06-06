@@ -20,6 +20,8 @@ public class LexerTest {
         return tokens == null ? null : tokens.stream().map(Token::tokenType).toList();
     }
 
+    // CR: test all tokens are generated
+
     @Test
     public void emptyData() {
         assertNull(getTokenTypes(""));

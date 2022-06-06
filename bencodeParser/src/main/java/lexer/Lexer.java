@@ -4,6 +4,7 @@ import error.TranslateBencodeException;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,7 +16,6 @@ public class Lexer {
     private String line;
     private int nLine;
     private int position;
-    private boolean hasError = false;
     private static final int ASCII_BARRIER = 127;
 
     private Lexer(BufferedReader br, Reporter reporter) {
@@ -45,7 +45,7 @@ public class Lexer {
             }
         }
 
-        return hasError || tokens.size() == 0 ? null : tokens;
+        return reporter.hasErrors() || tokens.size() == 0 ? null : tokens;
     }
 
     private void valueType() throws TranslateBencodeException {
@@ -60,7 +60,6 @@ public class Lexer {
             case 'd' -> addComplexType(TokenType.DICTIONARY);
             case 'e' -> addComplexType(TokenType.TYPE_END);
             default -> {
-                hasError = true;
                 if (!reporter.report(errorPosition("Unknown")))
                     throw new TranslateBencodeException("Limit error messages");
                 position++;
@@ -79,7 +78,7 @@ public class Lexer {
         tokens.add(new Token(TokenType.INTEGER, nLine, position, number));
     }
 
-    private void addString() throws TranslateBencodeException {
+    private void addString() {
         int size = getNumber(':');
         if (position + size > line.length()) {
             position--;
@@ -88,25 +87,24 @@ public class Lexer {
 
         String str = line.substring(position, position + size);
         if (str.chars().noneMatch(c -> c < ASCII_BARRIER))
-            throw new TranslateBencodeException(errorPosition("This string contains not ascii char"));
+            throw new TranslateBencodeException(errorPosition("This string contains non ascii char"));
 
         tokens.add(new Token(TokenType.STRING, nLine, position, str));
         position += size;
     }
 
-    private Integer getNumber(char endChar) throws TranslateBencodeException {
-        StringBuilder buffer = new StringBuilder();
+    private int getNumber(char endChar) {
+        StringBuilder builder = new StringBuilder();
         int startPosition = position;
 
         while (position < line.length() && line.charAt(position) != endChar) {
             if (!isDigit(line.charAt(position))) {
-                hasError = true;
                 if (!reporter.report(errorPosition("Expected number")))
                     throw new TranslateBencodeException("Limit error messages");
                 position++;
                 continue;
             }
-            buffer.append(line.charAt(position));
+            builder.append(line.charAt(position));
             position++;
         }
 
@@ -115,12 +113,12 @@ public class Lexer {
             throw new TranslateBencodeException(errorPosition("Expected '" + endChar + "' after"));
         }
 
-        if (buffer.length() == 0)
+        if (builder.length() == 0)
             throw new TranslateBencodeException(errorPosition("No number"));
 
         try {
             position++;
-            return Integer.parseInt(String.valueOf(buffer));
+            return Integer.parseInt(String.valueOf(builder));
         } catch (NumberFormatException e) {
             position = startPosition;
             throw new TranslateBencodeException(errorPosition("Too long number"));
@@ -133,7 +131,7 @@ public class Lexer {
             position = 0;
             return br.readLine();
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new UncheckedIOException(e);
         }
     }
 

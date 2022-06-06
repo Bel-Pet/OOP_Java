@@ -17,8 +17,11 @@ class ParserTest {
 
         Reporter reporter = new Reporter(10);
 
+        // CR: pass tokens
         return Parser.parse(Lexer.scan(br, reporter), reporter);
     }
+
+    // CR: positive tests for Expr types
 
     @Test
     public void emptyData() {

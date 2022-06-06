@@ -24,7 +24,7 @@ public class Main {
     public static void main(String[] args) throws IOException {
         BufferedReader input = new BufferedReader(new FileReader("src/main/resources/bencode.torrent"));
 
-        Writer out = new FileWriter("src/main/resources/out.json");
+        Writer out = new BufferedWriter(new FileWriter("src/main/resources/out.json"));
 
         String str = interpret(input, 10);
         if (str != null) out.write(str);//System.out.println(str);

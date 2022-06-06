@@ -1,5 +1,9 @@
 package error;
 
+import lexer.Token;
+
+import java.util.List;
+
 public class Reporter implements ErrorReporter {
 
     private final int maxMessages;
@@ -14,6 +18,11 @@ public class Reporter implements ErrorReporter {
         nMessages++;
         System.err.println(message);
         return nMessages < maxMessages;
+    }
+
+    @Override
+    public boolean hasErrors() {
+        return nMessages > 0;
     }
 
     public int getNumberErrors() {

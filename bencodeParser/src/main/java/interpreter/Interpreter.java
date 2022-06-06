@@ -19,10 +19,10 @@ public class Interpreter {
     }
 
     private String interpret() {
-        return expressions.stream().map(this::checkExpression).collect(Collectors.joining("\n"));
+        return expressions.stream().map(this::toJson).collect(Collectors.joining("\n"));
     }
 
-    private String checkExpression(Expr expr) {
+    private String toJson(Expr expr) {
         return switch (expr) {
             case Expr.Line n -> getLine(n);
             case Expr.Number n -> getNumber(n);
@@ -41,7 +41,7 @@ public class Interpreter {
 
     private String getArray(Expr.Array line) {
         return  "["
-                + line.value().stream().map(this::checkExpression).collect(Collectors.joining(", "))
+                + line.value().stream().map(this::toJson).collect(Collectors.joining(", "))
                 + "]";
     }
 
@@ -55,18 +55,15 @@ public class Interpreter {
         List<String> list = new LinkedList<>(dictionary.value().keySet());
         Collections.sort(list);
         str.add(list.stream().map(key -> addMapEntry(dictionary.value(), key)).collect(Collectors.joining(",\n")));
-        /*str.append(dictionary.value().keySet()
-                                        .stream().map(key -> addMapEntry(dictionary.value(), key))
-                                        .collect(Collectors.joining(",\n")));*/
         numberDictionaries--;
         str.add(" ".repeat(numberDictionaries) + "}");
 
         return str.toString();
     }
 
-    private String addMapEntry(LinkedHashMap<String, Expr> map, String key) {
+    private String addMapEntry(Map<String, Expr> map, String key) {
         return " ".repeat(numberDictionaries)
                 + "\"" + key + "\""
-                + ": " + checkExpression(map.get(key));
+                + ": " + toJson(map.get(key));
     }
 }
