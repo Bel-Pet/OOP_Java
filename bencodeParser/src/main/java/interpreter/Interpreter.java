@@ -52,9 +52,8 @@ public class Interpreter {
         str.add(" ".repeat(numberDictionaries) + "{");
         numberDictionaries++;
 
-        List<String> list = new LinkedList<>(dictionary.value().keySet());
-        Collections.sort(list);
-        str.add(list.stream().map(key -> addMapEntry(dictionary.value(), key)).collect(Collectors.joining(",\n")));
+        str.add(dictionary.value().keySet().stream()
+                .map(key -> addMapEntry(dictionary.value(), key)).collect(Collectors.joining(",\n")));
         numberDictionaries--;
         str.add(" ".repeat(numberDictionaries) + "}");
 
