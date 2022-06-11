@@ -40,36 +40,25 @@ public class Parser {
     }
 
     private Expr parseExpr() throws TranslateBencodeException {
-        return switch (tokens.get(position).tokenType()) {
+        position++;
+
+        return switch (tokens.get(position - 1).tokenType()) {
             case LIST -> parseList();
             case DICTIONARY -> parseDictionary();
-            default -> parseSimpleType();
+            case STRING -> new Expr.Line((String) tokens.get(position - 1).value());
+            case INTEGER -> new Expr.Number((Integer) tokens.get(position - 1).value());
+            default -> {
+                String message = unexpectedToken("Expected value",
+                        tokens.get(position - 1),
+                        TokenType.INTEGER, TokenType.STRING, TokenType.LIST, TokenType.DICTIONARY);
+
+                throw new TranslateBencodeException(message);
+            }
         };
     }
 
-    private Expr parseSimpleType() throws TranslateBencodeException {
-        if (tokens.get(position).tokenType() == TokenType.STRING) {
-            Expr expr = new Expr.Line((String) tokens.get(position).value());
-            position++;
-            return expr;
-        }
-
-        if (tokens.get(position).tokenType() == TokenType.INTEGER) {
-            Expr expr = new Expr.Number((Integer) tokens.get(position).value());
-            position++;
-            return expr;
-        }
-
-        String message = unexpectedToken("Expected value",
-                                            tokens.get(position),
-                                            TokenType.INTEGER, TokenType.STRING, TokenType.LIST, TokenType.DICTIONARY);
-
-        throw new TranslateBencodeException(message);
-    }
-
     private Expr parseList() throws TranslateBencodeException {
-        int startType = position;
-        position++;
+        int startType = position - 1;
 
         List<Expr> list = new ArrayList<>();
 
@@ -87,15 +76,13 @@ public class Parser {
                                                             TokenType.TYPE_END));
     }
 
-    private Expr parseDictionary() {
-        int startType = position;
-        position++;
+    private Expr parseDictionary() throws TranslateBencodeException {
+        int startType = position - 1;
 
         LinkedHashMap<String, Expr> map = new LinkedHashMap<>();
 
         while (position < tokens.size()) {
             if (tokens.get(position).tokenType() == TokenType.TYPE_END) {
-                // CR: check order + test
                 position++;
                 return new Expr.Dictionary(map);
             }
@@ -116,7 +103,7 @@ public class Parser {
                                                             TokenType.TYPE_END));
     }
 
-    private String addKey(LinkedHashMap<String, Expr> map) {
+    private String addKey(LinkedHashMap<String, Expr> map) throws TranslateBencodeException {
         if (tokens.get(position).tokenType() != TokenType.STRING) {
             String message = unexpectedToken("Invalid key", tokens.get(position), TokenType.STRING);
             throw new TranslateBencodeException(message);
@@ -126,6 +113,18 @@ public class Parser {
 
         if (map.containsKey(key)) {
             String message = unexpectedToken("Repeating key", tokens.get(position), TokenType.STRING);
+            throw new TranslateBencodeException(message);
+        }
+
+        if (map.size() == 0) {
+            position++;
+            return key;
+        }
+
+        String lastKeyMap = (String) map.keySet().toArray()[map.size() - 1];
+
+        if (lastKeyMap.compareTo(key) >= 0) {
+            String message = unexpectedToken("Wrong key order", tokens.get(position), TokenType.STRING);
             throw new TranslateBencodeException(message);
         }
 
