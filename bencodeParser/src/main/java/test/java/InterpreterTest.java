@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class InterpreterTest {
 
-    private String getJsonText(String text) {
+    private String getJasonText(String text) {
         BufferedReader br = new BufferedReader(new StringReader(text));
         Reporter reporter = new Reporter(10);
 
@@ -23,18 +23,13 @@ class InterpreterTest {
     }
 
     @Test
-    public void empty() {
-        assertNull(getJsonText(""));
-    }
-
-    @Test
     public void oneString() {
-        assertEquals("\"qwerty\"", getJsonText("6:qwerty"));
+        assertEquals("\"qwerty\"", getJasonText("6:qwerty"));
     }
 
     @Test
     public void oneNumber() {
-        assertEquals("456", getJsonText("i456e"));
+        assertEquals("456", getJasonText("i456e"));
     }
 
     @Test
@@ -43,16 +38,25 @@ class InterpreterTest {
                 {
                                 
                 }""";
-        assertEquals(output, getJsonText("de"));
+        assertEquals(output, getJasonText("de"));
     }
 
     @Test
-    public void oneElementDictionary() {
+    public void numberInDictionary() {
         String output = """
                 {
                  "adas": 6
                 }""";
-        assertEquals(output, getJsonText("d 4:adas i6e e"));
+        assertEquals(output, getJasonText("d 4:adas i6e e"));
+    }
+
+    @Test
+    public void stringInDictionary() {
+        String output = """
+                {
+                 "adas": "qwe"
+                }""";
+        assertEquals(output, getJasonText("d 4:adas 3:qwe e"));
     }
 
     @Test
@@ -64,7 +68,7 @@ class InterpreterTest {
                   "adas": 6
                  }
                 }""";
-        assertEquals(output, getJsonText("d 3:qwe d 4:adas i6e e e"));
+        assertEquals(output, getJasonText("d 3:qwe d 4:adas i6e e e"));
     }
 
     @Test
@@ -73,24 +77,27 @@ class InterpreterTest {
                 {
                  "qwe": [456]
                 }""";
-        assertEquals(output, getJsonText("d 3:qwe l i456e e e"));
+        assertEquals(output, getJasonText("d 3:qwe l i456e e e"));
     }
-
-    // CR: string value in dictionary
 
     @Test
     public void emptyList() {
-        assertEquals("[]", getJsonText("le"));
+        assertEquals("[]", getJasonText("le"));
     }
 
     @Test
-    public void oneElementList() {
-        assertEquals("[543]", getJsonText("l i543e e"));
+    public void numberInList() {
+        assertEquals("[543]", getJasonText("l i543e e"));
+    }
+
+    @Test
+    public void stringInList() {
+        assertEquals("[\"qwe\"]", getJasonText("l 3:qwe e"));
     }
 
     @Test
     public void listInList() {
-        assertEquals("[[543]]", getJsonText("l l i543e e e"));
+        assertEquals("[[543]]", getJasonText("l l i543e e e"));
     }
 
     @Test
@@ -99,16 +106,15 @@ class InterpreterTest {
                 [{
                  "rty": 456
                 }]""";
-        assertEquals(output, getJsonText("l d 3:rty i456e e e"));
+        assertEquals(output, getJasonText("l d 3:rty i456e e e"));
     }
 
     @Test
     public void complexData() {
         String input = """
                 d
-                3:bsd i5e
                 4:adas i6e
-                3:vfd l 4:dfgg 3:bgf i45e e
+                3:bsd i5e
                 3:fgh l l i435e 5:qwert
                     d   2:gt i12e
                         4:vfrd 2:rt
@@ -119,6 +125,7 @@ class InterpreterTest {
                 6:kjftgy d
                          3:kds i345e
                          e
+                3:vfd l 4:dfgg 3:bgf i45e e
                 e
                 """;
 
@@ -138,6 +145,6 @@ class InterpreterTest {
                  "vfd": ["dfgg", "bgf", 45]
                 }""";
 
-        assertEquals(output, getJsonText(input));
+        assertEquals(output, getJasonText(input));
     }
 }
