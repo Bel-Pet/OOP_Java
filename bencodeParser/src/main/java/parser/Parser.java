@@ -24,8 +24,6 @@ public class Parser {
     }
 
     private List<Expr> parse() {
-        if (tokens == null) return null;
-
         List<Expr> expressions = new ArrayList<>();
 
         while (position < tokens.size()) {
