@@ -1,5 +1,5 @@
 import error.*;
-import interpreter.Interpreter;
+import printer.JsonPrinter;
 import lexer.Lexer;
 import lexer.Token;
 import parser.Expr;
@@ -19,7 +19,7 @@ public class Main {
         }
         List<Expr> expressions = Parser.parse(tokens, reporter);
 
-        if (expressions != null) return Interpreter.interpret(expressions);
+        if (expressions != null) return JsonPrinter.print(expressions);
 
         System.out.println("Errors found: " + reporter.getNumberErrors() + "\nLimit error messages: " + limitErrorMessages);
         return null;
