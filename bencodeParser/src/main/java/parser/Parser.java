@@ -38,6 +38,7 @@ public class Parser {
     }
 
     private Expr parseExpr() throws TranslateBencodeException {
+        // CR: why move position forward and then do -1 everywhere?
         position++;
 
         return switch (tokens.get(position - 1).tokenType()) {
@@ -119,8 +120,10 @@ public class Parser {
             return key;
         }
 
+        // CR: please think about why is this wrong, fix it and tell me the answer
         String lastKeyMap = (String) map.keySet().toArray()[map.size() - 1];
 
+        // CR: we can just keep last inserted key, or null if we haven't inserted any yet
         if (lastKeyMap.compareTo(key) >= 0) {
             String message = unexpectedToken("Wrong key order", tokens.get(position), TokenType.STRING);
             throw new TranslateBencodeException(message);

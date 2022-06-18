@@ -72,7 +72,7 @@ public class Lexer {
         tokens.add(new Token(type, nLine, position, null));
     }
 
-    private void addNumber() throws TranslateBencodeException {
+    private void addNumber() {
         position++;
         Integer number = getNumber('e');
         tokens.add(new Token(TokenType.INTEGER, nLine, position, number));
@@ -86,19 +86,21 @@ public class Lexer {
         }
 
         String str = line.substring(position, position + size);
-        if (str.chars().noneMatch(c -> c < ASCII_BARRIER))
+        if (str.chars().anyMatch(c -> c >= ASCII_BARRIER))
             throw new TranslateBencodeException(errorPosition("This string contains non ascii char"));
 
         tokens.add(new Token(TokenType.STRING, nLine, position, str));
         position += size;
     }
 
+    // CR: support negative numbers
     private int getNumber(char endChar) {
         StringBuilder builder = new StringBuilder();
         int startPosition = position;
 
         while (position < line.length() && line.charAt(position) != endChar) {
             if (!isDigit(line.charAt(position))) {
+                // CR: why not just throw exception?
                 if (!reporter.report(errorPosition("Expected number")))
                     throw new TranslateBencodeException("Limit error messages");
                 position++;

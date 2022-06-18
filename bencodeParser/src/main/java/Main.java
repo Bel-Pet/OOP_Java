@@ -10,7 +10,7 @@ import java.util.List;
 
 public class Main {
 
-    public static String interpret(BufferedReader br, int limitErrorMessages) {
+    public static String getJson(BufferedReader br, int limitErrorMessages) {
         Reporter reporter = new Reporter(limitErrorMessages);
         List<Token> tokens = Lexer.scan(br, reporter);
         if (tokens == null) {
@@ -26,12 +26,13 @@ public class Main {
     }
 
     public static void main(String[] args) throws IOException {
+        // CR: first main argument - input file, second - output (optional). for incorrect usage print usage message
         BufferedReader input = new BufferedReader(new FileReader("src/main/resources/bencode.torrent"));
 
         Writer out = new BufferedWriter(new FileWriter("src/main/resources/out.json"));
 
-        String str = interpret(input, 10);
-        if (str != null) out.write(str);//System.out.println(str);
+        String json = getJson(input, 10);
+        if (json != null) out.write(json);//System.out.println(str);
 
         out.close();
     }
