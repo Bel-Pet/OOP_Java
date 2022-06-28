@@ -76,8 +76,18 @@ public class LexerTest {
     }
 
     @Test
+    public void NegativeNumber() {
+        assertTypes(getTokenTypes("i-34e"), TokenType.INTEGER);
+    }
+
+    @Test
     public void oneString() {
         assertTypes(getTokenTypes("3:qwe"), TokenType.STRING);
+    }
+
+    @Test
+    public void NegativeNumberInString() {
+        assertNull(getTokenTypes("-3:qwe"));
     }
 
     @Test
