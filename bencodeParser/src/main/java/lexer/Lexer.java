@@ -93,20 +93,14 @@ public class Lexer {
         position += size;
     }
 
-    // CR: support negative numbers
-    private int getNumber(char endChar) {
-        StringBuilder builder = new StringBuilder();
+    private Integer getNumber(char endChar) throws TranslateBencodeException {
         int startPosition = position;
 
+        if (position < line.length() && line.charAt(position) == '-') position++;
+
         while (position < line.length() && line.charAt(position) != endChar) {
-            if (!isDigit(line.charAt(position))) {
-                // CR: why not just throw exception?
-                if (!reporter.report(errorPosition("Expected number")))
-                    throw new TranslateBencodeException("Limit error messages");
-                position++;
-                continue;
-            }
-            builder.append(line.charAt(position));
+            if (!isDigit(line.charAt(position))) throw new TranslateBencodeException(errorPosition("Expected number"));
+
             position++;
         }
 
@@ -115,12 +109,12 @@ public class Lexer {
             throw new TranslateBencodeException(errorPosition("Expected '" + endChar + "' after"));
         }
 
-        if (builder.length() == 0)
+        if (startPosition == position)
             throw new TranslateBencodeException(errorPosition("No number"));
 
         try {
             position++;
-            return Integer.parseInt(String.valueOf(builder));
+            return Integer.parseInt(line.substring(startPosition, position - 1));
         } catch (NumberFormatException e) {
             position = startPosition;
             throw new TranslateBencodeException(errorPosition("Too long number"));
