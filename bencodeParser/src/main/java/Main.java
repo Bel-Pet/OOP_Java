@@ -24,7 +24,7 @@ public class Main {
         return null;
     }
 
-    public static void printer(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException {
         if (args.length == 0 || args.length > 2) {
             System.err.println("""
                 Bad input
@@ -44,13 +44,5 @@ public class Main {
 
         out.write(str);
         out.close();
-    }
-
-    public static void main(String[] args) throws IOException {
-        String[] str = new String[2];
-        str[0]= "bencode.torrent";
-        str[1]= "f.json";
-        System.out.println(str.length);
-        Main.printer(str);
     }
 }
