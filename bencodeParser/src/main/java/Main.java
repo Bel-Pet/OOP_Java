@@ -35,14 +35,14 @@ public class Main {
             return;
         }
 
-        String path = "src/main/resources/";
+        try (BufferedReader in = new BufferedReader(new FileReader(args[0]));
+             FileWriter out = args.length > 1 ? new FileWriter(args[1]) : new FileWriter("out.json"))
+        {
+            String str = interpret(in, 10);
 
-        String str = interpret(new BufferedReader(new FileReader(path + args[0])), 10);
-        if (str == null) return;
+            if (str == null) return;
 
-        Writer out = args.length > 1 ? new FileWriter(path + args[1]) : new FileWriter("src/main/resources/out.json");
-
-        out.write(str);
-        out.close();
+            out.write(str);
+        }
     }
 }
