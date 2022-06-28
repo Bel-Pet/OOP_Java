@@ -36,13 +36,14 @@ public class Main {
         }
 
         try (BufferedReader in = new BufferedReader(new FileReader(args[0]));
-             FileWriter out = args.length > 1 ? new FileWriter(args[1]) : new FileWriter("out.json"))
+             FileWriter out = args.length > 1 ? new FileWriter(args[1]) : null)
         {
             String str = interpret(in, 10);
 
             if (str == null) return;
 
-            out.write(str);
+            if (args.length == 1) System.out.println(str);
+            else out.write(str);
         }
     }
 }
