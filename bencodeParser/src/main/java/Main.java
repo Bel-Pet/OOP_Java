@@ -1,39 +1,56 @@
 import error.*;
-import printer.JsonPrinter;
-import lexer.Lexer;
-import lexer.Token;
-import parser.Expr;
-import parser.Parser;
+import interpreter.Interpreter;
+import lexer.*;
+import parser.*;
 
 import java.io.*;
 import java.util.List;
+import java.util.Scanner;
 
 public class Main {
 
-    public static String getJson(BufferedReader br, int limitErrorMessages) {
+    public static String interpret(BufferedReader br, int limitErrorMessages) {
         Reporter reporter = new Reporter(limitErrorMessages);
         List<Token> tokens = Lexer.scan(br, reporter);
         if (tokens == null) {
-            System.out.println("Errors found: " + reporter.getNumberErrors() + "\nLimit error messages: " + limitErrorMessages);
+            System.err.println("Errors found: " + reporter.getNumberErrors() + "\nLimit error messages: " + limitErrorMessages);
             return null;
         }
         List<Expr> expressions = Parser.parse(tokens, reporter);
 
-        if (expressions != null) return JsonPrinter.print(expressions);
+        if (expressions != null) return Interpreter.interpret(expressions);
 
-        System.out.println("Errors found: " + reporter.getNumberErrors() + "\nLimit error messages: " + limitErrorMessages);
+        System.err.println("Errors found: " + reporter.getNumberErrors() + "\nLimit error messages: " + limitErrorMessages);
         return null;
     }
 
-    public static void main(String[] args) throws IOException {
-        // CR: first main argument - input file, second - output (optional). for incorrect usage print usage message
-        BufferedReader input = new BufferedReader(new FileReader("src/main/resources/bencode.torrent"));
+    public static void printer(String[] args) throws IOException {
+        if (args.length == 0 || args.length > 2) {
+            System.err.println("""
+                Bad input
+                First argument: path to torrent file
+                Second argument(optional): path to json file
+                If second argument missing, create default out.json
+                """);
+            return;
+        }
 
-        Writer out = new BufferedWriter(new FileWriter("src/main/resources/out.json"));
+        String path = "src/main/resources/";
 
-        String json = getJson(input, 10);
-        if (json != null) out.write(json);//System.out.println(str);
+        String str = interpret(new BufferedReader(new FileReader(path + args[0])), 10);
+        if (str == null) return;
 
+        Writer out = args.length > 1 ? new FileWriter(path + args[1]) : new FileWriter("src/main/resources/out.json");
+
+        out.write(str);
         out.close();
+    }
+
+    public static void main(String[] args) throws IOException {
+        String[] str = new String[2];
+        str[0]= "bencode.torrent";
+        str[1]= "f.json";
+        System.out.println(str.length);
+        Main.printer(str);
     }
 }
